@@ -9,50 +9,26 @@ import numpy as np
 from PIL import Image as PIL
 from PIL.Image import Image
 
-if platform.system() == 'Windows':
-    # load .dll for Windows
-    LoadDLL = ctypes.WinDLL
-else:
-    # load lib for Linux, Darwin, etc
-    LoadDLL = ctypes.cdll.LoadLibrary
-
+LoadDLL = ctypes.cdll.LoadLibrary
 arch = platform.architecture()[0]
-if platform.system() == 'Windows':
-    # this dll is compiled from modified code
-    # which keeps the function name unmangled
-    # the dll is compiled in VS 2015 for x86
-    # with ENABLE_AVX2 option on to speed up
-    current_dir = Path(__file__).parent
-    dll_name = 'libfacedetection_{0}.{1}'
-    dll_name = dll_name.format(arch, 'dll')
-    path = Path(current_dir / dll_name)
-    dll = LoadDLL(path.resolve().as_posix())
-elif platform.system() == 'Linux':
-    # the dll the compiled using gcc for x86
-    # with ENABLE_AVX2 option on to speed up
-    current_dir = Path(__file__).parent
-    dll_name = 'libfacedetection_{0}.{1}'
-    dll_name = dll_name.format(arch, 'so')
-    path = Path(current_dir / dll_name)
-    dll = LoadDLL(path.resolve().as_posix())
-elif platform.system() == 'Darwin':
-    # TODO: Darwin support
-    raise NotImplementedError
-else:
-    # TODO: BSD support, etc
-    raise NotImplementedError
+assert platform.system() == 'Linux'
+current_dir = Path(__file__).parent
+dll_name = 'libfacedetection.so'
+path = Path(current_dir / dll_name)
+dll = LoadDLL(path.resolve().as_posix())
 
 # THE SIGNATURE OF facedetect_cnn
 # unsigned char * result_buffer
 # unsigned char * rgb_image_data
 # int width, int height, int step
-dll.facedetect_cnn.restype = ctypes.POINTER(ctypes.c_int)
-dll.facedetect_cnn.argtypes = [ctypes.POINTER(ctypes.c_ubyte),
+cnnfunc = dll.facedetect_cnn
+cnnfunc.restype = ctypes.POINTER(ctypes.c_int)
+cnnfunc.argtypes = [ctypes.POINTER(ctypes.c_ubyte),
                                ctypes.POINTER(ctypes.c_ubyte),
                                ctypes.c_int, ctypes.c_int, ctypes.c_int]
 
-# Faces: [(x y width height confidence angle)]
-Faces = List[Tuple[int, int, int, int, int]]
+# Faces: [(x y width height confidence)]
+Faces = List[Tuple[int, int, int, int]]
 c_ubyte_p = ctypes.POINTER(ctypes.c_ubyte)
 c_short_p = ctypes.POINTER(ctypes.c_short)
 c_int_p = ctypes.POINTER(ctypes.c_int)
@@ -72,20 +48,19 @@ def cfacedetect_cnn(image: bytes,
     result_buffer = (ctypes.c_ubyte * 0x20000)()
     # the return value is (int *)(result_buffer)
     # so just ignore it and use the result_buffer
-    dll.facedetect_cnn(result_buffer, image_data,
+    cnnfunc(result_buffer, image_data,
                        width, height, step)
     length = ctypes.cast(result_buffer, c_int_p)[0]
     faces = ctypes.cast(result_buffer, c_short_p)
     faces_results = []
     for i in range(length):
         start_addr = 2 + 142 * i
-        x = faces[start_addr]
-        y = faces[start_addr + 1]
-        w = faces[start_addr + 2]
-        h = faces[start_addr + 3]
-        c = faces[start_addr + 4]
-        a = faces[start_addr + 5]
-        result = (x, y, w, h, c, a)
+        c = faces[start_addr]
+        x = faces[start_addr + 1]
+        y = faces[start_addr + 2]
+        w = faces[start_addr + 3]
+        h = faces[start_addr + 4]
+        result = (x, y, w, h, c)
         faces_results.append(result)
     # since here is Python
     # no more length needed
@@ -126,8 +101,3 @@ def facedetect_cnn(image: Union[str, Path, Image, np.ndarray, bytes],
         image = image.tobytes()
     # everything is ready, call the function for result
     return cfacedetect_cnn(image, width, height, step)
-
-
-if __name__ == '__main__':
-    # print(dll.facedetect_cnn)
-    facedetect_cnn('lena512color.tiff')
