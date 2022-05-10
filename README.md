@@ -30,12 +30,18 @@ Clone, dafault prebuilded libfacedetection is in PyFaceDet dir, install
 from PyFaceDet import facedetectcnn
 from PIL import Image, ImageDraw, ImageOps , ImageFilter
 
-image = Image.open("img.jpg") # `Path`, PIL `Image`, `bytes`, and NumPy `Array` in BGR format are all compatible
+image = Image.open("img.jpg")
+draw  = ImageDraw.Draw(image, "RGBA") 
 for x, y, w, h, confidence in facedetectcnn.facedetect_cnn(image):
     print(x, y, w, h, confidence)
     if confidence < 75: continue
     face = image.crop((x, y, x + w, y + h))
-    face
+    display(face)
+    draw.rectangle([(x,y), (x +w,y + h)], fill=(200, 100, 0, 127), outline ="red")
+
+display(image)
 ```
+
+![image](https://user-images.githubusercontent.com/2915361/167689798-b282fc10-5cb3-4398-ae21-a7e997966ed4.png)
 
 Note: Parameters for `width`, `height` and `step` are necessary when use `bytes` object.
