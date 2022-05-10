@@ -7,21 +7,35 @@ PyFaceDet is a Python wrapper for quick face detection.
 
 ## Installation
 
-- Clone
-- Get the latest version of [libfacedetection](https://github.com/ShiqiYu/libfacedetection), compile
-- Put the generated `libfacedetection.so` file in the directory of PyFaceDet.
-- `pip3 install ./PyFaceDet`
+Clone, dafault prebuilded libfacedetection is in PyFaceDet dir, install
+```
+!rm -rf ./libfacedetection
+!rm -rf ./PyFaceDet
+
+!git clone --recursive https://github.com/OlegJakushkin/libfacedetection
+!cd libfacedetection && cmake -DCMAKE_INSTALL_PREFIX=/usr/ -DBUILD_SHARED_LIBS=ON  -DCMAKE_BUILD_TYPE=Release -DDEMO=OFF . &&    cmake --build . --config Release  && cmake --build . --config Release --target install
+
+!git clone --recursive https://github.com/zhuth/PyFaceDet
+!cp -fr /usr/lib/x86_64-linux-gnu/libfacedetection.* ./PyFaceDet/PyFaceDet/
+
+!ls ./PyFaceDet/PyFaceDet/
+
+!pip3 install ./PyFaceDet
+!cp -fr /usr/lib/x86_64-linux-gnu/libfacedetection.* /usr/local/lib/python3.7/dist-packages/PyFaceDet/
+```
 
 ## Usage
 
 ```python
-  from PyFaceDet import facedetectcnn
-  image = Image.open(...) # `Path`, PIL `Image`, `bytes`, and NumPy `Array` in BGR format are all compatible
-  for x, y, w, h, confidence in facedetectcnn.facedetect_cnn(image):
-      print(x, y, w, h, confidence)
-      if confidence < 75: continue
-      face = image.crop((x, y, x + w, y + h))
-      yield face
+from PyFaceDet import facedetectcnn
+from PIL import Image, ImageDraw, ImageOps , ImageFilter
+
+image = Image.open("img.jpg") # `Path`, PIL `Image`, `bytes`, and NumPy `Array` in BGR format are all compatible
+for x, y, w, h, confidence in facedetectcnn.facedetect_cnn(image):
+    print(x, y, w, h, confidence)
+    if confidence < 75: continue
+    face = image.crop((x, y, x + w, y + h))
+    face
 ```
 
 Note: Parameters for `width`, `height` and `step` are necessary when use `bytes` object.
